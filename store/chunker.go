@@ -7,7 +7,6 @@ import (
 
 const ChunkSize = 1024 * 1024 // 1MB blocks
 
-// ChunkSplitter breaks a large object into 1MB cryptographically hashed chunks
 func ChunkSplitter(data []byte) (map[string][]byte, []string) {
 	chunks := make(map[string][]byte)
 	var manifest []string

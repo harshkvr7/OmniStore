@@ -1,34 +1,63 @@
 package raft
 
 import (
-	"bytes"
-	"encoding/gob"
 	"os"
 	"sync"
+	"time"
 )
 
-// Persister simulates the WAL and state storage
 type Persister struct {
-	mu        sync.Mutex
+	mu        sync.RWMutex
 	raftState []byte
 	filename  string
+	saveCh    chan []byte
 }
 
 func MakePersister(filename string) *Persister {
-	return &Persister{filename: filename}
+	ps := &Persister{
+		filename: filename,
+		saveCh:   make(chan []byte, 1000),
+	}
+	go ps.batchFlusher()
+	return ps
 }
 
 func (ps *Persister) SaveRaftState(state []byte) {
 	ps.mu.Lock()
-	defer ps.mu.Unlock()
 	ps.raftState = state
-	// Simulate flushing WAL to disk
-	_ = os.WriteFile(ps.filename, state, 0644)
+	ps.mu.Unlock()
+
+	select {
+	case ps.saveCh <- state:
+	default:
+	}
+}
+
+func (ps *Persister) batchFlusher() {
+	for {
+		state := <-ps.saveCh
+		draining := true
+		for draining {
+			select {
+			case state = <-ps.saveCh:
+			default:
+				draining = false
+			}
+		}
+
+		f, err := os.OpenFile(ps.filename, os.O_WRONLY|os.O_CREATE|os.O_SYNC, 0644)
+		if err == nil {
+			f.Write(state)
+			f.Sync()
+			f.Close()
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
 }
 
 func (ps *Persister) ReadRaftState() []byte {
-	ps.mu.Lock()
-	defer ps.mu.Unlock()
+	ps.mu.RLock()
+	defer ps.mu.RUnlock()
 	data, err := os.ReadFile(ps.filename)
 	if err != nil {
 		return nil

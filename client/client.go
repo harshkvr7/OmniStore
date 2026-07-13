@@ -4,8 +4,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"kvstore/server"
 	"net/rpc"
-	"omnistore/server"
 	"sync"
 	"time"
 )

@@ -2,7 +2,7 @@ package server
 
 import (
 	"fmt"
-	"omnistore/raft"
+	"kvstore/raft"
 	"sync"
 	"time"
 )
@@ -30,13 +30,25 @@ type PutArgs struct {
 	Manifest []string
 	OpType   string
 }
-type PutReply struct { Success bool; Err string }
+type PutReply struct {
+	Success bool
+	Err     string
+}
 
-type DeleteArgs struct { Key string }
-type DeleteReply struct { Success bool; Err string }
+type DeleteArgs struct{ Key string }
+type DeleteReply struct {
+	Success bool
+	Err     string
+}
 
-type UpdateArgs struct { Key string; Manifest []string }
-type UpdateReply struct { Success bool; Err string }
+type UpdateArgs struct {
+	Key      string
+	Manifest []string
+}
+type UpdateReply struct {
+	Success bool
+	Err     string
+}
 
 func MakeServer(peers []string, me int, persister *raft.Persister) *OmniServer {
 	applyCh := make(chan raft.ApplyMsg)
@@ -98,7 +110,7 @@ func (srv *OmniServer) applier() {
 	for msg := range srv.applyCh {
 		if msg.CommandValid {
 			op := msg.Command.(Op)
-			
+
 			srv.mu.Lock()
 			switch op.OpType {
 			case "PutChunk":
